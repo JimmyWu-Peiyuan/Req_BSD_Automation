@@ -1,0 +1,10 @@
+{
+  "paths": {
+    "requirements_file": "data/sample_requirements.csv",
+    "template_file": "data/templates/bsd_template_clean.docx",
+    "output_directory": "data/output",
+    "data_directory": "data",
+    "templates_directory": "data/templates",
+    "placeholders_file": "data/placeholders.json"
+  }
+}

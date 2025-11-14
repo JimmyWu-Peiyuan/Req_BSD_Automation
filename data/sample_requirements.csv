@@ -1,0 +1,7 @@
+﻿Requirement ID,Requirement type,Sales product,Tenant/Partner,Domain,Sub-domain,Requirement,Description,Priority
+TRAVEL-CMU-PC-024,Functional,Travel,CMU,2 - Policy Issuance,3 - Sales,1 - D2C Quote & Buy journey,"The CMU Travel Insurance Homepage (Regular SI) must enable customers to explore options, get quotes, and purchase. Include CTAs and accessibility.",P2
+TRAVEL-CMU-PC-025,Functional,Travel,CMU,2 - Policy Issuance,3 - Sales,1 - D2C Quote & Buy journey,"Trip Selection page must let customers select plan, show indicators and back button.",P2
+TRAVEL-CMU-PC-026,Functional,Travel,CMU,2 - Policy Issuance,3 - Sales,1 - D2C Quote & Buy journey,"Trip Dates page must capture dates, validate input, include back button and links.",P3
+TRAVEL-CMU-PC-027,Functional,Travel,CMU,2 - Policy Issuance,3 - Sales,1 - D2C Quote & Buy journey,"Trip Booking must confirm details, show steps/status, include Subscribe/Save/View actions.",P2
+TRAVEL-CMU-PC-028,Functional,Travel,CMU,2 - Policy Issuance,3 - Sales,1 - D2C Quote & Buy journey,"Plan Selection shows plan options (Essential/Smart/Comfort), filters, Modify inputs, pricing/discount.",P2
+TRAVEL-CMU-PC-029,Functional,Travel,CMU,2 - Policy Issuance,3 - Sales,1 - D2C Quote & Buy journey,Optional Coverages allow add/remove coverages with indicators and validation.,P3

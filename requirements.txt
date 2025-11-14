@@ -1,0 +1,5 @@
+docxtpl
+openai
+python-dotenv
+pandas
+openpyxl
