@@ -1,4 +1,4 @@
-docxtpl
+docxtpl[subdoc]
 openai
 python-dotenv
 pandas

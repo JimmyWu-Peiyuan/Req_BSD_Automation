@@ -1,3 +1,8 @@
+
+"""
+Files to understand how many requirements we need to generate and how many functions there are
+"""
+
 import pandas as pd
 from pathlib import Path
 from typing import List, Dict
@@ -10,6 +15,45 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+def _get_unique_functions_normalized(requirements_df) -> List[str]:
+    """
+    Get unique function names with case-insensitive deduplication.
+    Returns functions in title case format.
+    
+    Args:
+        requirements_df: DataFrame containing requirements
+        
+    Returns:
+        List of unique function names in title case
+    """
+    if 'Function' not in requirements_df.columns:
+        return []
+    
+    # Get all function names
+    all_functions = requirements_df['Function'].dropna().tolist()
+    
+    # Normalize and deduplicate (case-insensitive)
+    seen_normalized = set()
+    unique_functions = []
+    
+    for func in all_functions:
+        func_str = str(func).strip()
+        if not func_str:
+            continue
+            
+        # Normalize for comparison (lowercase)
+        normalized = func_str.lower()
+        
+        # If we haven't seen this normalized version, add it
+        if normalized not in seen_normalized:
+            seen_normalized.add(normalized)
+            # Store in title case format (first letter of each word capitalized)
+            unique_functions.append(func_str.title())
+    
+    # Sort for consistent ordering
+    return sorted(unique_functions)
+
 
 def req_separation(req_path: str) -> List[Dict]:
     """
@@ -26,6 +70,7 @@ def req_separation(req_path: str) -> List[Dict]:
         'requirements_df': <DataFrame>,              # Filtered pandas DF
         'output_filename': 'BSD_Travel_Policy.docx', # Suggested filename
         'functional_count': 20,                      # F requirements
+        'unique_functions': ['product_definition', 'feature_set'],
         'non_functional_count': 5                    # NF requirements
     },
     ]
@@ -73,6 +118,33 @@ def req_separation(req_path: str) -> List[Dict]:
         bsd_id = f"{sales_product}_{domain}".replace(' ', '').replace('-', '')
         output_filename = f"BSD_{sales_product.replace(' ', '_')}_{domain.replace(' ', '_')}.docx"
         
+        if 'Function' in bsd_requirements.columns:
+            # Get all function names
+            all_functions = bsd_requirements['Function'].dropna().tolist()
+            
+            # Normalize and deduplicate (case-insensitive)
+            seen_normalized = set()
+            unique_functions_list = []
+            
+            for func in all_functions:
+                func_str = str(func).strip()
+                if not func_str:
+                    continue
+                    
+                # Normalize for comparison (lowercase)
+                normalized = func_str.lower()
+                
+                # If we haven't seen this normalized version, add it
+                if normalized not in seen_normalized:
+                    seen_normalized.add(normalized)
+                    # Store in title case format (first letter of each word capitalized)
+                    unique_functions_list.append(func_str.title())
+            
+            # Sort for consistent ordering
+            unique_functions = sorted(unique_functions_list)
+        else:
+            unique_functions = []
+
         bsd_group = {
             'bsd_id': bsd_id,
             'bsd_number': idx,
@@ -82,6 +154,7 @@ def req_separation(req_path: str) -> List[Dict]:
             'requirements_df': bsd_requirements,
             'output_filename': output_filename,
             'functional_count': len(bsd_requirements[bsd_requirements['Requirement type'] == 'Functional']),
+            'unique_functions': unique_functions,
             'non_functional_count': len(bsd_requirements[bsd_requirements['Requirement type'] == 'Non-Functional'])
         }
         

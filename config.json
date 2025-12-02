@@ -1,7 +1,8 @@
 {
   "paths": {
-    "requirements_file": "data/sample_requirements.csv",
+    "requirements_file": "data/ReqListExample.xlsm",
     "template_file": "data/templates/bsd_template_clean.docx",
+    "block_template_file": "data/templates/bsd_function_block.docx",
     "output_directory": "data/output",
     "data_directory": "data",
     "templates_directory": "data/templates",

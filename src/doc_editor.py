@@ -1,9 +1,11 @@
 from pathlib import Path
-from typing import Dict, Any, Optional
-from docxtpl import DocxTemplate
+from typing import Dict, Any, Optional, List
+from docxtpl import DocxTemplate, Subdoc
 import json
 import logging
 from datetime import datetime
+import tempfile
+import os
 
 # Initialize logger
 logging.basicConfig(
@@ -11,6 +13,26 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def _resolve_path(path_str: str, base_dir: Path) -> Path:
+    """Resolve relative path to absolute path."""
+    path = Path(path_str)
+    return path if path.is_absolute() else base_dir / path
+  
+
+def _load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
+    """Load config.json and return paths dictionary."""
+    if config_path is None:
+        config_path = Path(__file__).parent.parent / "config.json"
+    else:
+        config_path = Path(config_path)
+    
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            return json.load(f).get("paths", {})
+    return {}
+
 
 
 def replace_placeholders(
@@ -22,63 +44,75 @@ def replace_placeholders(
 ) -> Path:
     """
     Load template, replace placeholders, and save as a new document.
-    
-    Args:
-        placeholders: Dictionary of placeholder names and their replacement values.
-        Placeholders in template should use Jinja2 syntax: {{ placeholder_name }}
-        Example: {"title": "My Document", "author": "John Doe"}
-        output_filename: Name for the output file (e.g., "my_document.docx")
-        template_path: Path to template file. If None, loads from config.json
-        output_dir: Output directory. If None, uses output_directory from config.json
-        config_path: Path to config.json. If None, looks for config.json in project root.
-    
-    Returns:
-        Path to the generated document
-    
-    Example:
-        replace_placeholders(
-            placeholders={"title": "My Document", "date": "2024-01-15"},
-            output_filename="my_document.docx"
-        )
     """
-    # Load config if needed
-    if config_path is None:
-        config_path = Path(__file__).parent.parent / "config.json"
-    else:
-        config_path = Path(config_path)
+    base_dir = Path(__file__).parent.parent
+    paths = _load_config(config_path)
     
-    if config_path.exists():
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        paths = config.get("paths", {})
-    else:
-        paths = {}
-    
-    # Get template path
+    # Resolve template path FIRST (needed for Subdoc creation)
     if template_path is None:
         template_file = paths.get("template_file")
         if not template_file:
             raise ValueError("template_path not provided and template_file not found in config.json")
-        template_path_obj = Path(template_file)
-        if not template_path_obj.is_absolute():
-            template_path_obj = Path(__file__).parent.parent / template_path_obj
-        template_path = str(template_path_obj)
+        template_path = template_file
     
-    template_file = Path(template_path)
-    
+    template_file = _resolve_path(template_path, base_dir)
     if not template_file.exists():
-        raise FileNotFoundError(f"Template file not found: {template_path}")
-    
-    if not template_file.suffix.lower() == '.docx':
+        raise FileNotFoundError(f"Template file not found: {template_file}")
+    if template_file.suffix.lower() != '.docx':
         raise ValueError(f"Template must be a .docx file, got: {template_file.suffix}")
     
-    # Get output directory
+    # Load main template FIRST (needed for Subdoc creation)
+    doc = DocxTemplate(str(template_file))
+    logger.info(f"Loaded template: {template_file}")
+    
+    # NOTE Step 1: Create function blocks using main document
+    if placeholders.get('function_contents'):
+        function_contents = placeholders.pop('function_contents')
+        block_template_path = paths.get("block_template_file")
+        
+        if block_template_path:
+            block_path = _resolve_path(block_template_path, base_dir)
+            if block_path.exists():
+                logger.info(f"Creating function blocks from template: {block_path}")
+                # Create Subdocs using main document's new_subdoc method
+                function_blocks = []
+                for func_data in function_contents:
+                    # First, render the block template with function-specific data
+                    block_template = DocxTemplate(str(block_path))
+                    block_template.render({
+                        'function_name': func_data['function_name'],
+                        'summary': func_data['summary'],
+                        'implementation': func_data['implementation'],
+                    })
+                    
+                    # Save rendered block to temporary location
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.docx')
+                    temp_file.close()
+                    block_template.save(temp_file.name)
+                    
+                    # Create subdoc from the rendered document
+                    subdoc = doc.new_subdoc(temp_file.name)
+                    function_blocks.append(subdoc)
+                    
+                    # Clean up temp file
+                    os.unlink(temp_file.name)
+                
+                placeholders['function_blocks'] = function_blocks
+                logger.info(f"Created {len(function_blocks)} function blocks")
+            else:
+                logger.warning(f"Block template not found: {block_path} - skipping function blocks")
+                placeholders['function_blocks'] = []
+        else:
+            logger.warning("block_template_file not found in config.json - skipping function blocks")
+            placeholders['function_blocks'] = []
+    else:
+        placeholders['function_blocks'] = []
+    
+    # Resolve output directory
     if output_dir is None:
         output_dir = paths.get("output_directory", "output")
     
-    output_dir_path = Path(output_dir)
-    if not output_dir_path.is_absolute():
-        output_dir_path = Path(__file__).parent.parent / output_dir_path
+    output_dir_path = _resolve_path(output_dir, base_dir)
     
     # Ensure output filename has .docx extension
     if not output_filename.endswith('.docx'):
@@ -86,16 +120,10 @@ def replace_placeholders(
     
     output_file = output_dir_path / output_filename
     
-    # Load template
-    doc = DocxTemplate(str(template_file))
-    logger.info(f"Loaded template: {template_file}")
+    # NOTE Step 2.1 Add date placeholder
+    placeholders["DDMMYYYY"] = datetime.now().strftime("%d %B %Y")
     
-    # Add date placeholder if not already provided
-    if "DDMMYYYY" not in placeholders:
-        today_date = datetime.now().strftime("%d %B %Y")  # e.g., "13 November 2025"
-        placeholders["DDMMYYYY"] = today_date
-    
-    # Replace placeholders
+    # NOTE Step 2.2 Replace placeholders  
     try:
         logger.info(f"Rendering with placeholders: {list(placeholders.keys())}")
         doc.render(placeholders)
@@ -103,16 +131,12 @@ def replace_placeholders(
     except Exception as e:
         logger.error(f"Error rendering template: {e}")
         logger.error(f"Placeholders provided: {list(placeholders.keys())}")
-        # Log first 200 chars of each placeholder value for debugging
         for key, value in placeholders.items():
-            value_preview = str(value)[:200] if value else "None"
-            logger.error(f"  {key}: {value_preview}...")
+            logger.error(f"  {key}: {str(value)[:200] if value else 'None'}...")
         raise
     
-    # Create output directory if it doesn't exist
+    # NOTE Step 3: Save document
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Save document
     doc.save(str(output_file))
     logger.info(f"Saved document to: {output_file}")
     
@@ -124,28 +148,84 @@ if __name__ == "__main__":
     import sys
     
     try:
-        # Example placeholders
+        # Dummy test data - matches the structure from app.py
         example_placeholders = {
-            "title": "Business Solution Document",
-            "product_name": "Travel Insurance",
-            "domain": "Policy Issuance",
-            "version": "1.0",
-            "date": "2024-01-15"
+            "business_solution_overview": """
+            This chapter outlines the motor insurance workflows, detailing its functionality, 
+            step-by-step process, data handling, field definitions, and specific business rules. 
+            It provides clarity on how customers interact with the system, the integrations involved, 
+            and the differences across regions. The system supports comprehensive policy management 
+            including product definition, premium calculation, and policy issuance capabilities.
+            """,
+            
+            "function_contents": [
+                {
+                    "function_name": "Product Definition",
+                    "summary": """
+                    The Product Definition function enables the creation and management of insurance products 
+                    within the system. Each product must have a unique code and name to ensure clear identification. 
+                    Products define specific coverage types such as Comprehensive, Auto Liability, and Liability Coverage. 
+                    Additionally, each product supports multiple plans with varying benefits and coverage limits, 
+                    typically categorized as Basic, Standard, and Premium tiers.
+                    """,
+                    "implementation": """
+                    Step 1: Create a new product with a unique product code and name.
+                    Step 2: Define the coverage types available for this product (e.g., Comprehensive, Liability).
+                    Step 3: Configure product-specific business rules and validation criteria.
+                    Step 4: Set up plan tiers (Basic, Standard, Premium) with their respective benefits.
+                    Step 5: Define coverage limits and exclusions for each plan tier.
+                    Step 6: Activate the product for use in policy issuance workflows.
+                    """,
+                    "requirement_count": 5
+                },
+                {
+                    "function_name": "Premium Definition",
+                    "summary": """
+                    The Premium Definition function handles the calculation and configuration of insurance premiums 
+                    based on various risk factors and coverage selections. It supports dynamic pricing models that 
+                    adjust premiums according to customer risk profiles, coverage options, and regional variations.
+                    """,
+                    "implementation": """
+                    Step 1: Define base premium rates for each product and coverage type.
+                    Step 2: Configure risk factor multipliers (age, driving history, vehicle type).
+                    Step 3: Set up regional pricing variations and surcharges.
+                    Step 4: Implement premium calculation algorithms based on selected coverage.
+                    Step 5: Apply discounts and promotional pricing rules.
+                    Step 6: Validate calculated premiums against business rules and limits.
+                    """,
+                    "requirement_count": 4
+                }
+            ],
+            
+            "non_functional_requirements": [
+                {
+                    "Requirement": "REQ-001",
+                    "Description": "The system shall support a minimum of 10,000 concurrent users without performance degradation."
+                },
+                {
+                    "Requirement": "REQ-002",
+                    "Description": "All user data must be encrypted using AES-256 encryption standards."
+                }
+            ]
         }
         
         # Replace placeholders and save with specified filename
         output_file = replace_placeholders(
             placeholders=example_placeholders,
-            output_filename="bsd_travel_policy.docx"
+            output_filename="test_bsd_document.docx"
         )
         
         print(f"\n✓ Document rendered successfully!")
         print(f"  Output: {output_file}")
         print(f"\n  Placeholders used: {list(example_placeholders.keys())}")
+        print(f"  Function blocks created: {len(example_placeholders.get('function_contents', []))}")
+        print(f"  Non-functional requirements: {len(example_placeholders.get('non_functional_requirements', []))}")
         
     except json.JSONDecodeError as e:
         logger.error(f"Error parsing config.json: {e}")
         sys.exit(1)
     except Exception as e:
         logger.error(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
