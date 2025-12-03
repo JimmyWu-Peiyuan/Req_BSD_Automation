@@ -197,16 +197,7 @@ if __name__ == "__main__":
                 }
             ],
             
-            "non_functional_requirements": [
-                {
-                    "Requirement": "REQ-001",
-                    "Description": "The system shall support a minimum of 10,000 concurrent users without performance degradation."
-                },
-                {
-                    "Requirement": "REQ-002",
-                    "Description": "All user data must be encrypted using AES-256 encryption standards."
-                }
-            ]
+            "non_functional_requirements": "REQ-001: The system shall support a minimum of 10,000 concurrent users without performance degradation.\nREQ-002: All user data must be encrypted using AES-256 encryption standards."
         }
         
         # Replace placeholders and save with specified filename

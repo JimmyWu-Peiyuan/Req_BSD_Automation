@@ -22,8 +22,8 @@ The summary should:
 - Explain the purpose and business value of this function
 - Highlight key capabilities and features
 - Mention any important business rules or constraints
-- Be written in a clear, professional business-report style
-- The summary should not exceeds 500 words
+- Be written in a clear, professional business-report style, in paragraph format
+- The summary should not exceeds 400 words
 
 Example:
 Each insurance product is required to have a unique code and name to ensure clear identification and differentiation within the system. Products must define specific coverage types, such as Comprehensive, Auto Liability, and Liability Coverage, to specify the scope of protection offered. Additionally, each product must support multiple plans with varying benefits and coverage limits—typically categorized as Basic, Standard, and Premium—to provide flexible options tailored to different customer needs.
@@ -40,7 +40,7 @@ The functional description should:
 - Flow logically from one step to the next
 - Be comprehensive but well-organized
 - Use clear, professional business language
-- The response should be less than 500 words
+- The response not exceed 400 words
 
 Format the output with:
 - Clear numbered steps

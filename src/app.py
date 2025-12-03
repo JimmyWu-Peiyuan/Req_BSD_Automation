@@ -96,34 +96,47 @@ def extract_requirement_descriptions(requirements_df) -> str:
     return "\n".join([f"- {desc}" for desc in descriptions if desc.strip()])
 
 
-def extract_non_functional_requirements(requirements_df) -> List[Dict[str, str]]:
+def extract_non_functional_requirements(requirements_df) -> str:
     """
-    Extract non-functional requirements as a simple list.
+    Extract non-functional requirements and format as a single string with one line per unique requirement.
     
     Args:
         requirements_df: pandas DataFrame containing requirements
         
     Returns:
-        List of dictionaries with 'requirement' and 'description' keys
+        Formatted string with one line per unique non-functional requirement
     """
     if 'Requirement type' not in requirements_df.columns:
-        return []
+        return ''
     
     non_functional_reqs = requirements_df[
         requirements_df['Requirement type'] == 'Non-Functional'
     ].copy()
     
     if non_functional_reqs.empty:
-        return []
+        return ''
     
-    result = []
+    # Use a set to track unique requirements (by requirement ID + description)
+    seen_requirements = set()
+    unique_requirements = []
+    
     for _, row in non_functional_reqs.iterrows():
-        result.append({
-            'requirement': str(row.get('Requirement', '')) if pd.notna(row.get('Requirement')) else '',
-            'description': str(row.get('Description', '')) if pd.notna(row.get('Description')) else ''
-        })
+        requirement_id = str(row.get('Requirement', '')).strip() if pd.notna(row.get('Requirement')) else ''
+        description = str(row.get('Description', '')).strip() if pd.notna(row.get('Description')) else ''
+        
+        # Create a unique key for deduplication
+        req_key = (requirement_id, description)
+        
+        if req_key not in seen_requirements and description:  # Only add if description exists
+            seen_requirements.add(req_key)
+            # Format as: "Requirement ID: Description"
+            if requirement_id:
+                unique_requirements.append(f"{requirement_id}: {description}")
+            else:
+                unique_requirements.append(description)
     
-    return result
+    # Return as a single string with each requirement on a new line
+    return "\n".join(unique_requirements)
 
 
 def generate_placeholder_content(
@@ -135,7 +148,7 @@ def generate_placeholder_content(
 ) -> Any:
     """
     Generate content for ONE field in the BSD document using LLM.
-
+    
     Args:
         llm: LLM instance
         placeholder_name: Name of the placeholder
@@ -274,11 +287,13 @@ def generate_bsd_document(
         })
     # Add function contents to placeholders
     placeholders['function_contents'] = function_contents
-
+    
     # Step 3: Extract non-functional requirements
     logger.info("Extracting non-functional requirements...")
-    placeholders['non_functional_requirements'] = extract_non_functional_requirements(requirements_df)
-    logger.info(f"Found {len(placeholders['non_functional_requirements'])} non-functional requirement(s)")
+    non_func_reqs = extract_non_functional_requirements(requirements_df)
+    placeholders['non_functional_requirements'] = non_func_reqs
+    req_count = len(non_func_reqs.split('\n')) if non_func_reqs else 0
+    logger.info(f"Found {req_count} unique non-functional requirement(s)")
     
     if output_filename is None:
         output_filename = bsd_group.get('output_filename', f"BSD_{bsd_group['bsd_number']}.docx")

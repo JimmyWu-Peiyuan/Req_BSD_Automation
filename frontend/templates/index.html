@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSD Document Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-area">
+                <img src="{{ url_for('static', filename='images/peak3logo.avif') }}" alt="Peak3 Logo" class="logo-icon">
+            </div>
+            <h1>BSD Document Generator</h1>
+            <p class="subtitle">Generate Business Solution Documents from Requirements</p>
+        </header>
+
+        <main>
+            <!-- File Upload Section -->
+            <section id="uploadSection" class="card">
+                <h2>
+                    <span class="number-circle">1</span>
+                    Upload Requirements File
+                </h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p class="upload-text">Click to select file or drag and drop</p>
+                        <p class="upload-hint">Supported formats: .xlsm, .xlsx, .csv</p>
+                    </div>
+                    <input type="file" id="fileInput" accept=".xlsm,.xlsx,.csv" style="display: none;">
+                </div>
+                <div id="fileInfo" class="file-info" style="display: none;">
+                    <span id="fileName"></span>
+                    <button id="clearFile" class="btn-secondary">Clear</button>
+                </div>
+                <button id="analyzeBtn" class="btn-primary" disabled>Analyze Requirements</button>
+            </section>
+
+            <!-- Analysis Results Section -->
+            <section id="analysisSection" class="card" style="display: none;">
+                <h2>
+                    <span class="number-circle">2</span>
+                    Analysis Results
+                </h2>
+                <div id="analysisContent"></div>
+                <button id="generateBtn" class="btn-primary">Generate BSD Documents</button>
+            </section>
+
+            <!-- Progress Section -->
+            <section id="progressSection" class="card" style="display: none;">
+                <h2>
+                    <span class="number-circle">3</span>
+                    Generation Progress
+                </h2>
+                <div class="progress-container">
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="progressBar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <span class="progress-text" id="progressText">0%</span>
+                    </div>
+                    <div class="progress-message" id="progressMessage">Initializing...</div>
+                    <div class="progress-stages" id="progressStages"></div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="card" style="display: none;">
+                <h2>
+                    <span class="number-circle">4</span>
+                    Generated Documents
+                </h2>
+                <div id="resultsContent"></div>
+            </section>
+
+            <!-- Error Section -->
+            <section id="errorSection" class="card error-card" style="display: none;">
+                <h2>Error</h2>
+                <div id="errorMessage"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
